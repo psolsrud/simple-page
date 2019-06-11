@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Esri Leaflet Authenticated Services</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+    
+    <!-- Load Leaflet from CDN-->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@{{siteData.latest_leaflet}}/dist/leaflet.css"
+    integrity="{{siteData.latest_leaflet_css_integrity}}"
+    crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@{{siteData.latest_leaflet}}/dist/leaflet.js"
+    integrity="{{siteData.latest_leaflet_integrity}}"
+    crossorigin=""></script>  
+
+    <!-- Load Esri Leaflet from CDN -->
+    <script src="https://unpkg.com/esri-leaflet@{{siteData.latest_esri_leaflet}}/dist/esri-leaflet.js"
+    integrity="{{siteData.latest_esri_leaflet_integrity}}"
+    crossorigin=""></script>     
+
+    <style>
+        html,
+        body,
+        #map {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        .form-container {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 25px;
+            border: 2px solid #333;
+            background: #fff;
+            font-size: 1.15em;
+            z-index: 1000;
+        }
+
+        .form-component {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <!-- container for map -->
+    <section id="map">
+        <!-- form to add in secured service -->
+        <section class="form-container">
+            <form id="securedServicesForm">
+                <div class="form-component">
+                    <label for="username">User Name</label>
+                    <input type="text" id="username" />
+                </div>
+                <div class="form-component">
+                    <label for="password">Password</label>
+                    <input type="password" id="password">
+                </div>
+                <button id="formSubmit" type="submit">Add Services</button>
+            </form>
+        </section>
+    </section>    
+
+    <!-- script to create map and load secured services -->
+    <script>
+        'use strict';
+
+        // submit element of form
+        const submitBtn = document.getElementById('formSubmit');
+        // add event listener to form
+        submitBtn.addEventListener('click', addServicesFromServer);
+
+        // create map and set zoom level and center coordinates
+        const map = L.map('map').setView([34.089, -116.865], 9);
+        // set basemap to Esri Streets
+        const esriStreets = L.esri.basemapLayer('Streets').addTo(map);
+
+        const tokenUrl = 'https://sampleserver6.arcgisonline.com/arcgis/tokens/generateToken';
+
+        // function to make request to server
+        function serverAuth(server, username, password, callback) {
+            L.esri.post(server, {
+              username: username,
+              password: password,
+              f: 'json',
+              expiration: 86400,
+              client: 'referer',
+              referer: window.location.origin
+            }, callback);
+        }
+
+        // function to run when form submitted
+        function addServicesFromServer(e) {
+            // prevent page from refreshing
+            e.preventDefault();
+
+            // get values from form
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            // generate token from server and add service from callback function
+            serverAuth(tokenUrl,username,password,function(error, response) {
+                // add layer to map
+                const dl = L.esri.dynamicMapLayer({
+                    url: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services/Wildfire_secure_ac/MapServer',
+                    opacity: 1,
+                    token:  response.token
+                }).addTo(map);
+            }); // end serverAuth call
+        } // end addServicesFromServer call
+    </script>
+</body>
+</html>
